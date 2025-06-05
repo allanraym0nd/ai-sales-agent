@@ -1,7 +1,7 @@
 import React from 'react';
 import { db,auth,provider } from './firebase';
 import { useState,useEffect } from 'react';
-import { signOut,signInWithPopup } from 'firebase/auth';
+import { signOut,signInWithPopup,getAuth,GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { Send, Bot, User } from 'lucide-react';
 import { addDoc,collection,onSnapshot,orderBy,query,serverTimestamp } from 'firebase/firestore';
 
@@ -11,16 +11,23 @@ export default function AISalesAgent() {
     const[session,setSession] = useState([])
     const[newMessage, setNewMessage] =useState('')
 
+// auth state listener
+useEffect(()=> {
+   const unsubscribe = onAuthStateChanged( auth ,(user)=>  {
+  setSession(user)   
+})
+},)
 
-    console.log(session)
-
-    const signUserIn = async () => {
+       const signUserIn = async () => {
+      const provider = new GoogleAuthProvider();
         const signInWithGoogle = await signInWithPopup(auth,provider);
     }
 
     const signUserOut = async () => {
        await signOut(auth);
     }
+
+    console.log(session)
 useEffect(()=> {
 
   const setUpMessageListener = async () => {
@@ -41,9 +48,9 @@ const unsubscribe = onSnapshot(q, (querySnapshot) => {
 
 });
 // cleanup
- return unsubscribe();
+ return unsubscribe;
 }
-setUpMessageListener
+setUpMessageListener()
 },[])
 
 const sendMessage = async(e) => {
@@ -135,11 +142,15 @@ setNewMessage('');
       <div className="bg-white border-t p-4">
         <div className="flex gap-2">
           <textarea
+            value={newMessage}
+            onChange={(e)=> setNewMessage(e.target.value)}
             placeholder="Type your message here..."
             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 resize-none"
             rows={1}
           />
-          <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+          <button 
+          onClick={sendMessage}
+          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
             <Send size={20} />
           </button>
         </div>
