@@ -10,13 +10,16 @@ export default function AISalesAgent() {
     const[messages,setMessages] = useState([])
     const[session,setSession] = useState([])
     const[newMessage, setNewMessage] =useState('')
+    const[isLoading,setIsLoading]=useState(false);
 
 // auth state listener
 useEffect(()=> {
    const unsubscribe = onAuthStateChanged( auth ,(user)=>  {
   setSession(user)   
 })
-},)
+
+return unsubscribe;m
+},[])
 
        const signUserIn = async () => {
       const provider = new GoogleAuthProvider();
@@ -26,6 +29,7 @@ useEffect(()=> {
     const signUserOut = async () => {
        await signOut(auth);
     }
+
 
     console.log(session)
 useEffect(()=> {
@@ -55,21 +59,57 @@ setUpMessageListener()
 
 const sendMessage = async(e) => {
   e.preventDefault();
-    
-  await addDoc(collection(db, "messages"), {
-
-    text: newMessage,
-    sender: "user",
-    timestamp:serverTimestamp(),
-    userId:session?.uid,
-    userName:session?.displayName,
-
-
-  });
-
-setNewMessage('');
   
+  if(!session?.uid || !newMessage.trim()) {
+    console.log("user not signed in or empty message");
+    return;
+  }
+
+  const userMessage = newMessage; 
+  setNewMessage(''); 
+  setIsLoading(true);
+  
+  try {
+    
+    await addDoc(collection(db, "messages"), {
+      text: userMessage,
+      sender: "user",
+      timestamp: serverTimestamp(),
+      userId: session.uid,
+      userName: session.displayName,
+    });
+
+    //  Get AI response
+    const aiResponse = await getAIResponse(userMessage);
+    
+    //  Save AI message
+    await addDoc(collection(db, "messages"), {
+      text: aiResponse,
+      sender: "ai",
+      timestamp: serverTimestamp(),
+      userId: "ai-bot", 
+      userName: "AI Sales Agent",
+    });
+    
+  } catch (error) {
+    console.error("Error sending message:", error);
+   
+  } finally  {
+    setIsLoading(false)
+  }
 }
+
+if(!session?.uid) {
+  return (
+    <div className="w-full flex h-screen justify-center items-center">
+      <button
+      className="bg-blue-200 text-white p-4"
+      onClick={signUserIn}>
+        Sign in with Google to chat
+        </button>
+    </div>
+  )
+} else {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -84,58 +124,32 @@ setNewMessage('');
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* AI Message */}
-        <div className="flex justify-start">
-          <div className="bg-white text-gray-800 border max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow">
-            <div className="flex items-start gap-2">
-              <Bot size={16} className="mt-1 text-blue-500" />
-              <div>
-                <p className="text-sm">Hello! I'm your AI sales assistant. How can I help you today?</p>
-                <p className="text-xs mt-1 text-gray-500">2:30 PM</p>
-              </div>
-            </div>
-          </div>
+       {/* Replace all your hardcoded message divs with this: */}
+{messages.map((message) => (
+  <div key={message.id} className={message.sender === 'user' ? "flex justify-end" : "flex justify-start"}>
+    <div className={message.sender === 'user' 
+      ? "bg-blue-500 text-white max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow"
+      : "bg-white text-gray-800 border max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow"
+    }>
+      <div className="flex items-start gap-2">
+        {message.sender === 'user' ? (
+          <User size={16} className="mt-1" />
+        ) : (
+          <Bot size={16} className="mt-1 text-blue-500" />
+        )}
+        <div>
+          <p className="text-sm">{message.text}</p>
+          <p className={message.sender === 'user' 
+            ? "text-xs mt-1 text-blue-100" 
+            : "text-xs mt-1 text-gray-500"
+          }>
+            {message.timestamp?.toDate?.()?.toLocaleTimeString() || 'Just now'}
+          </p>
         </div>
-
-        {/* User Message */}
-        <div className="flex justify-end">
-          <div className="bg-blue-500 text-white max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow">
-            <div className="flex items-start gap-2">
-              <User size={16} className="mt-1" />
-              <div>
-                <p className="text-sm">Hi, I need help with finding the right product for my business.</p>
-                <p className="text-xs mt-1 text-blue-100">2:31 PM</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Another AI Message */}
-        <div className="flex justify-start">
-          <div className="bg-white text-gray-800 border max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow">
-            <div className="flex items-start gap-2">
-              <Bot size={16} className="mt-1 text-blue-500" />
-              <div>
-                <p className="text-sm">I'd be happy to help you find the perfect solution! Can you tell me more about your business and what specific challenges you're facing?</p>
-                <p className="text-xs mt-1 text-gray-500">2:31 PM</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Typing indicator (static) */}
-        <div className="flex justify-start">
-          <div className="bg-white text-gray-800 border max-w-xs px-4 py-2 rounded-lg shadow">
-            <div className="flex items-center gap-2">
-              <Bot size={16} className="text-blue-500" />
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-              </div>
-            </div>
-          </div>
-        </div>
+      </div>
+    </div>
+  </div>
+))}
       </div>
 
       {/* Input Area */}
@@ -158,4 +172,4 @@ setNewMessage('');
     </div>
   );
 }
-
+}
