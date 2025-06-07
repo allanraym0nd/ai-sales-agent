@@ -2,14 +2,14 @@ import React from 'react';
 import { db,auth, } from './firebase';
 import { useState,useEffect } from 'react';
 import { signOut,signInWithPopup,getAuth,GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, LogOut } from 'lucide-react';
 import { addDoc,collection,onSnapshot,orderBy,query,serverTimestamp } from 'firebase/firestore';
-// import OpenAI from "openai"
+
 
 export default function AISalesAgent() {
 
     const[messages,setMessages] = useState([])
-    const[session,setSession] = useState([null])
+    const[session,setSession] = useState(null)  
     const[newMessage, setNewMessage] =useState('')
     const[isLoading,setIsLoading]=useState(false);
 
@@ -105,7 +105,7 @@ const sendMessage = async(e) => {
 const getAIResponse = async(userMessage) => {
 try {
 
-  // Add this temporarily in your getAIResponse function
+
 console.log("API Key:", process.env.REACT_APP_OPENAI_API_KEY ? "Present" : "Missing");
 const response = await fetch('https://api.openai.com/v1/chat/completions', {
   method:'POST', 
@@ -145,72 +145,114 @@ const response = await fetch('https://api.openai.com/v1/chat/completions', {
 
 if(!session?.uid) {
   return (
-    <div className="w-full flex h-screen justify-center items-center">
-      <button
-      className="bg-blue-200 text-white p-4"
-      onClick={signUserIn}>
-        Sign in with Google to chat
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl p-12 shadow-2xl max-w-md w-full text-center border">
+        <div className="mb-8">
+          <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center mx-auto mb-6">
+            <Bot size={40} className="text-white" />
+          </div>
+          <h1 className="text-3xl font-light text-black mb-3">AI Sales Agent</h1>
+          <p className="text-gray-600 font-light">Your intelligent sales assistant</p>
+        </div>
+        <button
+          className="w-full bg-black text-white py-4 px-8 rounded-2xl hover:bg-gray-800 transition-all duration-300 font-medium text-lg"
+          onClick={signUserIn}>
+          Sign in with Google
         </button>
+      </div>
     </div>
   )
 } else {
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
-      <div className="bg-blue-600 text-white p-4 shadow-lg">
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <Bot size={24} />
-          AI Sales Agent
-        </h1>
-        <p className="text-blue-100 text-sm">Your intelligent sales assistant</p>
-      </div>
-
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-       {/* Replace all your hardcoded message divs with this: */}
-{messages.map((message) => (
-  <div key={message.id} className={message.sender === 'user' ? "flex justify-end" : "flex justify-start"}>
-    <div className={message.sender === 'user' 
-      ? "bg-blue-500 text-white max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow"
-      : "bg-white text-gray-800 border max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow"
-    }>
-      <div className="flex items-start gap-2">
-        {message.sender === 'user' ? (
-          <User size={16} className="mt-1" />
-        ) : (
-          <Bot size={16} className="mt-1 text-blue-500" />
-        )}
-        <div>
-          <p className="text-sm">{message.text}</p>
-          <p className={message.sender === 'user' 
-            ? "text-xs mt-1 text-blue-100" 
-            : "text-xs mt-1 text-gray-500"
-          }>
-            {message.timestamp?.toDate?.()?.toLocaleTimeString() || 'Just now'}
-          </p>
+    <div className="min-h-screen bg-black p-6 flex items-center justify-center">
+      <div className="w-full max-w-5xl h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden border">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 p-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center">
+                <Bot size={24} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-light text-black">AI Sales Agent</h1>
+                <p className="text-gray-500 text-sm font-light">Your intelligent sales assistant</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-gray-700 text-sm font-light">Welcome, {session.displayName}</span>
+              <button
+                onClick={signUserOut}
+                className="text-gray-400 hover:text-black transition-colors p-3 rounded-xl hover:bg-gray-50"
+              >
+                <LogOut size={20} />
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-))}
-      </div>
 
-      {/* Input Area */}
-      <div className="bg-white border-t p-4">
-        <div className="flex gap-2">
-          <textarea
-            value={newMessage}
-            onChange={(e)=> setNewMessage(e.target.value)}
-            placeholder="Type your message here..."
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 resize-none"
-            rows={1}
-          />
-          <button 
-          onClick={sendMessage}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
-            <Send size={20} />
-          </button>
+        {/* Messages Container */}
+        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-gray-50">
+          {messages.map((message) => (
+            <div key={message.id} className={message.sender === 'user' ? "flex justify-end" : "flex justify-start"}>
+              <div className={`max-w-sm lg:max-w-lg px-6 py-4 rounded-3xl shadow-sm ${
+                message.sender === 'user' 
+                  ? "bg-black text-white" 
+                  : "bg-white text-gray-900 border border-gray-200"
+              }`}>
+                <div className="flex items-start gap-4">
+                  {message.sender === 'user' ? (
+                    <User size={18} className="mt-1 opacity-80" />
+                  ) : (
+                    <Bot size={18} className="mt-1 text-gray-600" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-sm leading-relaxed font-light">{message.text}</p>
+                    <p className={`text-xs mt-3 font-light ${
+                      message.sender === 'user' 
+                        ? "text-gray-300" 
+                        : "text-gray-400"
+                    }`}>
+                      {message.timestamp?.toDate?.()?.toLocaleTimeString() || 'Just now'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-white border border-gray-200 max-w-xs px-6 py-4 rounded-3xl shadow-sm">
+                <div className="flex items-center gap-4">
+                  <Bot size={18} className="text-gray-600" />
+                  <div className="flex space-x-2">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Input Area */}
+        <div className="bg-white border-t border-gray-200 p-8">
+          <div className="flex gap-4">
+            <textarea
+              value={newMessage}
+              onChange={(e)=> setNewMessage(e.target.value)}
+              placeholder="Type your message here..."
+              className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:bg-white resize-none transition-all duration-200 font-light"
+              rows={1}
+            />
+            <button 
+              onClick={sendMessage}
+              className="bg-black text-white px-8 py-4 rounded-2xl hover:bg-gray-800 transition-all duration-200 shadow-sm">
+              <Send size={22} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
