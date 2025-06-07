@@ -99,6 +99,10 @@ const sendMessage = async(e) => {
   }
 }
 
+const getAIResponse = async() => {
+  
+}
+
 if(!session?.uid) {
   return (
     <div className="w-full flex h-screen justify-center items-center">
