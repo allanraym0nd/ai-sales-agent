@@ -1,14 +1,15 @@
 import React from 'react';
-import { db,auth,provider } from './firebase';
+import { db,auth, } from './firebase';
 import { useState,useEffect } from 'react';
 import { signOut,signInWithPopup,getAuth,GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { Send, Bot, User } from 'lucide-react';
 import { addDoc,collection,onSnapshot,orderBy,query,serverTimestamp } from 'firebase/firestore';
+// import OpenAI from "openai"
 
 export default function AISalesAgent() {
 
     const[messages,setMessages] = useState([])
-    const[session,setSession] = useState([])
+    const[session,setSession] = useState([null])
     const[newMessage, setNewMessage] =useState('')
     const[isLoading,setIsLoading]=useState(false);
 
@@ -18,7 +19,7 @@ useEffect(()=> {
   setSession(user)   
 })
 
-return unsubscribe;m
+return unsubscribe;
 },[])
 
        const signUserIn = async () => {
@@ -34,7 +35,7 @@ return unsubscribe;m
     console.log(session)
 useEffect(()=> {
 
-  const setUpMessageListener = async () => {
+  const setUpMessageListener =  () => {
     // query for message collection
      const q = query(collection(db, "messages"),
      orderBy("timestamp", "asc"));
@@ -54,7 +55,9 @@ const unsubscribe = onSnapshot(q, (querySnapshot) => {
 // cleanup
  return unsubscribe;
 }
-setUpMessageListener()
+
+ const unsubscribe = setUpMessageListener()
+  return unsubscribe;
 },[])
 
 const sendMessage = async(e) => {
@@ -99,8 +102,45 @@ const sendMessage = async(e) => {
   }
 }
 
-const getAIResponse = async() => {
-  
+const getAIResponse = async(userMessage) => {
+try {
+
+  // Add this temporarily in your getAIResponse function
+console.log("API Key:", process.env.REACT_APP_OPENAI_API_KEY ? "Present" : "Missing");
+const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  method:'POST', 
+  headers: {
+    'Content-type': 'application/json',
+    'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
+  },
+  body: JSON.stringify({
+    model:'gpt-3.5-turbo',
+    messages: [
+      {
+        role:'system',
+        content:"you are a helpful AI sales assistant. Help customers find the right products and answer their questions in a friendly, professional manner."
+      },
+      {
+        role:'user',
+        content:userMessage
+      }
+
+    ],
+    max_tokens: 150,
+    temperature: 0.7
+  })
+});
+  const data = await response.json();
+
+  if(!response.ok) {
+    throw new Error(data.error?.message || 'Failed to get AI response')
+  }
+  return data.choices[0].message.content
+} catch(error) {
+  console.error('Error getting AI response')
+  return 'Sorry, im having trouble responding right now. Please try again!'
+
+}
 }
 
 if(!session?.uid) {
