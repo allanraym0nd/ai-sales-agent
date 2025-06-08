@@ -1,6 +1,6 @@
 import React from 'react';
 import { db,auth, } from './firebase';
-import { useState,useEffect } from 'react';
+import { useState,useEffect,useRef } from 'react';
 import { signOut,signInWithPopup,getAuth,GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { Send, Bot, User, LogOut } from 'lucide-react';
 import { addDoc,collection,onSnapshot,orderBy,query,serverTimestamp } from 'firebase/firestore';
@@ -12,6 +12,9 @@ export default function AISalesAgent() {
     const[session,setSession] = useState(null)  
     const[newMessage, setNewMessage] =useState('')
     const[isLoading,setIsLoading]=useState(false);
+
+
+    const scrollToText =useRef(null)
 
 // auth state listener
 useEffect(()=> {
@@ -101,6 +104,19 @@ const sendMessage = async(e) => {
     setIsLoading(false)
   }
 }
+
+function handleScrollToText() {
+
+  scrollToText.current.scrollIntoView({
+    behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center'
+  })
+
+
+
+}
+ 
 
 const getAIResponse = async(userMessage) => {
 try {
@@ -238,7 +254,8 @@ if(!session?.uid) {
         </div>
 
         {/* Input Area */}
-        <div className="bg-white border-t border-gray-200 p-8">
+        <div ref={scrollToText}
+        className="bg-white border-t border-gray-200 p-8">
           <div className="flex gap-4">
             <textarea
               value={newMessage}
@@ -249,6 +266,7 @@ if(!session?.uid) {
             />
             <button 
               onClick={sendMessage}
+
               className="bg-black text-white px-8 py-4 rounded-2xl hover:bg-gray-800 transition-all duration-200 shadow-sm">
               <Send size={22} />
             </button>
