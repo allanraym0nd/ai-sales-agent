@@ -254,7 +254,7 @@ if(!session?.uid) {
         </div>
 
         {/* Input Area */}
-        <div ref={scrollToText}
+        <div 
         className="bg-white border-t border-gray-200 p-8">
           <div className="flex gap-4">
             <textarea
@@ -270,6 +270,7 @@ if(!session?.uid) {
               className="bg-black text-white px-8 py-4 rounded-2xl hover:bg-gray-800 transition-all duration-200 shadow-sm">
               <Send size={22} />
             </button>
+            <span ref={scrollToText}/>
           </div>
         </div>
       </div>
