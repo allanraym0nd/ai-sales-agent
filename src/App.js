@@ -51,7 +51,7 @@ return unsubscribe;
             });
         }
     };
-    
+
 useEffect(()=> {
 
   const setUpMessageListener =  () => {
@@ -168,6 +168,13 @@ const response = await fetch('https://api.openai.com/v1/chat/completions', {
 }
 }
 
+const handleKeyPress = (e) =>{
+    if(e.key === 'Enter'){
+      e.preventDefault()
+      sendMessage(e);
+    }
+}
+
 if(!session?.uid) {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
@@ -268,6 +275,7 @@ if(!session?.uid) {
         className="bg-white border-t border-gray-200 p-8">
           <div className="flex gap-4">
             <textarea
+              onKeyPress={handleKeyPress}
               value={newMessage}
               onChange={(e)=> setNewMessage(e.target.value)}
               placeholder="Type your message here..."
