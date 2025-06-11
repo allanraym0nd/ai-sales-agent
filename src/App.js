@@ -14,7 +14,7 @@ export default function AISalesAgent() {
     const[isLoading,setIsLoading]=useState(false);
 
 
-    const scrollToText =useRef(null)
+    const messagesEndRef =useRef(null)
 
 // auth state listener
 useEffect(()=> {
@@ -36,6 +36,22 @@ return unsubscribe;
 
 
     console.log(session)
+
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    // Fixed scroll function
+    const scrollToBottom = () => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'end'
+            });
+        }
+    };
+    
 useEffect(()=> {
 
   const setUpMessageListener =  () => {
@@ -62,6 +78,9 @@ const unsubscribe = onSnapshot(q, (querySnapshot) => {
  const unsubscribe = setUpMessageListener()
   return unsubscribe;
 },[])
+
+
+
 
 const sendMessage = async(e) => {
   e.preventDefault();
@@ -105,17 +124,7 @@ const sendMessage = async(e) => {
   }
 }
 
-function handleScrollToText() {
 
-  scrollToText.current.scrollIntoView({
-    behavior: 'smooth',
-      block: 'nearest',
-      inline: 'center'
-  })
-
-
-
-}
  
 
 const getAIResponse = async(userMessage) => {
@@ -251,6 +260,7 @@ if(!session?.uid) {
               </div>
             </div>
           )}
+           <div ref={messagesEndRef} />
         </div>
 
         {/* Input Area */}
@@ -270,7 +280,7 @@ if(!session?.uid) {
               className="bg-black text-white px-8 py-4 rounded-2xl hover:bg-gray-800 transition-all duration-200 shadow-sm">
               <Send size={22} />
             </button>
-            <span ref={scrollToText}/>
+           
           </div>
         </div>
       </div>
