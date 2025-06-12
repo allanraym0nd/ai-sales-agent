@@ -1,9 +1,9 @@
 import React from 'react';
 import { db,auth, } from './firebase';
 import { useState,useEffect,useRef } from 'react';
-import { signOut,signInWithPopup,getAuth,GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
+import { signOut,signInWithPopup,getAuth,GoogleAuthProvider, onAuthStateChanged, } from 'firebase/auth';
 import { Send, Bot, User, LogOut } from 'lucide-react';
-import { addDoc,collection,onSnapshot,orderBy,query,serverTimestamp } from 'firebase/firestore';
+import { addDoc,collection,onSnapshot,orderBy,query,serverTimestamp,where,deleteDoc } from 'firebase/firestore';
 
 
 export default function AISalesAgent() {
@@ -52,11 +52,20 @@ return unsubscribe;
         }
     };
 
+    //listening for messages
+
 useEffect(()=> {
+// if no user dont return anything
+  if(!session?.uid){
+    return ;
+  }
 
   const setUpMessageListener =  () => {
     // query for message collection
-     const q = query(collection(db, "messages"),
+     const q = 
+     query(collection(db, "messages"),
+     // filter message by Id
+     where("userId", "==", session.uid),
      orderBy("timestamp", "asc"));
   
 // real-time listener
@@ -77,7 +86,7 @@ const unsubscribe = onSnapshot(q, (querySnapshot) => {
 
  const unsubscribe = setUpMessageListener()
   return unsubscribe;
-},[])
+},[session?.uid]) // re-run when user changes !
 
 
 
@@ -124,8 +133,21 @@ const sendMessage = async(e) => {
   }
 }
 
+const deleteMessage =async (messageId,messageUserId)=> {
+  if(session?.uid) return; 
 
- 
+    if(session.uid != messageUserId) {
+    console.log("You cannot delete other users messages!")
+try{
+  await deleteDoc(doc(db, 'messages', messageId));
+}catch(error) {
+  console.log("There was an error deleting the message!") 
+}
+
+  }
+    setMessages(messages.filter((message)=> message.id != messageId))
+  }
+}
 
 const getAIResponse = async(userMessage) => {
 try {
@@ -294,5 +316,4 @@ if(!session?.uid) {
       </div>
     </div>
   );
-}
 }
