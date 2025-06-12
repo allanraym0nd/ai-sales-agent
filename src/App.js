@@ -14,7 +14,7 @@ export default function AISalesAgent() {
     const[isLoading,setIsLoading]=useState(false);
     const[chatSessions,setChatSessions] =useState([])
     const[currentSessionId,setCurrentSessionId]=useState(null)
-    const[isCreatingNewSession,setIsCreatingNewSession]=useState(false)
+    const[isCreatingSession,setIsCreatingSession]=useState(false)
 
 
     const messagesEndRef =useRef(null)
@@ -204,28 +204,28 @@ const handleKeyPress = (e) =>{
 
 
 // creating a new chat Session
-const createNewSession = await () => {
+const createNewSession = async () => {
   if(!session?.uid) return; 
 
-   setIsCreatingNewSession(true);
+   setIsCreatingSession(true);
   try{
        const newSession =  {
-         userId= session.uid,
-         title= 'New Chat',
+         userId: session.uid,
+         title: 'New Chat',
          createdAt: serverTimestamp(),
-         LastMessageAt: serverTimestamp(),
-         messagecount: 0
+         lastMessageAt: serverTimestamp(),
+         messageCount: 0
        };
 
        const docRef = await addDoc(collection(db,'chatSession'), newSession)
        setCurrentSessionId(docRef.id);
-       messages([])
+       setMessages([])
 
        console.log('New Session Created :', docRef.id)
   } catch(error) {
-    console.log("Failed creating new chat!")
+    console.error("Failed creating new chat!")
   } finally {
-    setIsCreatingNewSession(false)
+    setIsCreatingSession(false)
   }
 };
 
@@ -259,13 +259,25 @@ const loadChatSession = () =>{
 
 });
   
- const deleteSession = (sessionId) =>{
+ const deleteSession = async (sessionId) =>{
   if(!session?.uid) return ;
 
   try{
+
     await deleteDoc(doc(db,"chatSessions",sessionId));
 
-    
+    if(currentSessionId === sessionId) {
+      const remainingSessions = chatSessions.filter((c)=> c.id != sessionId)
+    }
+    if(remainingSessions.length > 0 ){
+      setCurrentSessionId(remainingSessions[0].id)
+    } else {
+      createNewSession();
+    }
+
+    console.log("Session Deleted:", sessionId)
+  }catch(error){
+    console.log("Error Deleting Session :", error)
   }
  }
   
@@ -275,7 +287,20 @@ const switchToSession = (sessionId) =>{
   setCurrentSessionId(sessionId);
 }
 
+const updateSessionTitle = async (sessionId) => {
+ if(!session?.uid) return;
 
+ try{
+  await updateDoc(doc(db,"chatSessions"), sessionId), {
+    title: newTitle
+  }
+    console.log(" Chat Title Updated! ", sessionId)
+}
+  catch(error){
+      console.log("Failed to update title", error)
+  }
+ }
+}
 
 if(!session?.uid) {
   return (
@@ -407,5 +432,4 @@ if(!session?.uid) {
       </div>
     </div>
   );
-}
 }
