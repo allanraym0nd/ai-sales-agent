@@ -1,9 +1,9 @@
 import React from 'react';
 import { db,auth, } from './firebase';
 import { useState,useEffect,useRef } from 'react';
-import { signOut,signInWithPopup,getAuth,GoogleAuthProvider, onAuthStateChanged, } from 'firebase/auth';
+import { signOut,signInWithPopup,getAuth,GoogleAuthProvider, onAuthStateChanged} from 'firebase/auth';
 import { Send, Bot, User, LogOut } from 'lucide-react';
-import { addDoc,collection,onSnapshot,orderBy,query,serverTimestamp,where,deleteDoc } from 'firebase/firestore';
+import { addDoc,collection,onSnapshot,orderBy,query,serverTimestamp,where,deleteDoc,doc } from 'firebase/firestore';
 
 
 export default function AISalesAgent() {
@@ -52,7 +52,7 @@ return unsubscribe;
         }
     };
 
-    //listening for messages
+    //listening for messages - FIXED TO INCLUDE AI MESSAGES
 
 useEffect(()=> {
 // if no user dont return anything
@@ -61,11 +61,11 @@ useEffect(()=> {
   }
 
   const setUpMessageListener =  () => {
-    // query for message collection
+    // query for message collection - GET BOTH USER AND AI MESSAGES
      const q = 
      query(collection(db, "messages"),
-     // filter message by Id
-     where("userId", "==", session.uid),
+     // filter message by user ID OR ai-bot
+     where("userId", "in", [session.uid, "ai-bot"]),
      orderBy("timestamp", "asc"));
   
 // real-time listener
@@ -133,21 +133,23 @@ const sendMessage = async(e) => {
   }
 }
 
-const deleteMessage =async (messageId,messageUserId)=> {
-  if(session?.uid) return; 
+// FIXED DELETE MESSAGE FUNCTION
+const deleteMessage = async (message) => {
+  if (!session?.uid) return; 
 
-    if(session.uid != messageUserId) {
+  // Only allow deletion of own messages
+  if (message.userId !== session.uid) {
     console.log("You cannot delete other users messages!")
-try{
-  await deleteDoc(doc(db, 'messages', messageId));
-}catch(error) {
-  console.log("There was an error deleting the message!") 
+    return;
+  }
+
+  try {
+    await deleteDoc(doc(db, 'messages', message.id));
+  } catch (error) {
+    console.error("There was an error deleting the message:", error) 
+  }
 }
 
-  }
-    setMessages(messages.filter((message)=> message.id != messageId))
-  }
-}
 
 const getAIResponse = async(userMessage) => {
 try {
@@ -249,28 +251,39 @@ if(!session?.uid) {
         <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-gray-50">
           {messages.map((message) => (
             <div key={message.id} className={message.sender === 'user' ? "flex justify-end" : "flex justify-start"}>
-              <div className={`max-w-sm lg:max-w-lg px-6 py-4 rounded-3xl shadow-sm ${
-                message.sender === 'user' 
-                  ? "bg-black text-white" 
-                  : "bg-white text-gray-900 border border-gray-200"
-              }`}>
-                <div className="flex items-start gap-4">
-                  {message.sender === 'user' ? (
-                    <User size={18} className="mt-1 opacity-80" />
-                  ) : (
-                    <Bot size={18} className="mt-1 text-gray-600" />
-                  )}
-                  <div className="flex-1">
-                    <p className="text-sm leading-relaxed font-light">{message.text}</p>
-                    <p className={`text-xs mt-3 font-light ${
-                      message.sender === 'user' 
-                        ? "text-gray-300" 
-                        : "text-gray-400"
-                    }`}>
-                      {message.timestamp?.toDate?.()?.toLocaleTimeString() || 'Just now'}
-                    </p>
+              <div className="relative group"> {/* ADDED RELATIVE POSITIONING */}
+                <div className={`max-w-sm lg:max-w-lg px-6 py-4 rounded-3xl shadow-sm ${
+                  message.sender === 'user' 
+                    ? "bg-black text-white" 
+                    : "bg-white text-gray-900 border border-gray-200"
+                }`}>
+                  <div className="flex items-start gap-4">
+                    {message.sender === 'user' ? (
+                      <User size={18} className="mt-1 opacity-80" />
+                    ) : (
+                      <Bot size={18} className="mt-1 text-gray-600" />
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm leading-relaxed font-light">{message.text}</p>
+                      <p className={`text-xs mt-3 font-light ${
+                        message.sender === 'user' 
+                          ? "text-gray-300" 
+                          : "text-gray-400"
+                      }`}>
+                        {message.timestamp?.toDate?.()?.toLocaleTimeString() || 'Just now'}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                {/* FIXED: MOVED DELETE BUTTON OUTSIDE AND FIXED CONDITION */}
+                {message.sender === 'user' && message.userId === session.uid && (
+                  <button
+                    onClick={() => deleteMessage(message)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs hover:bg-red-600"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -316,4 +329,5 @@ if(!session?.uid) {
       </div>
     </div>
   );
+}
 }
