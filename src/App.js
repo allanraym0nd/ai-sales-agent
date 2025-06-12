@@ -177,7 +177,7 @@ const handleKeyPress = (e) =>{
 
 if(!session?.uid) {
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl p-12 shadow-2xl max-w-md w-full text-center border">
         <div className="mb-8">
           <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center mx-auto mb-6">
@@ -197,7 +197,7 @@ if(!session?.uid) {
 } else {
 
   return (
-    <div className="min-h-screen bg-black p-6 flex items-center justify-center">
+    <div className="min-h-screen bg-white p-6 flex items-center justify-center">
       <div className="w-full max-w-5xl h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden border">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 p-8">
