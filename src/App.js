@@ -202,6 +202,81 @@ const handleKeyPress = (e) =>{
     }
 }
 
+
+// creating a new chat Session
+const createNewSession = await () => {
+  if(!session?.uid) return; 
+
+   setIsCreatingNewSession(true);
+  try{
+       const newSession =  {
+         userId= session.uid,
+         title= 'New Chat',
+         createdAt: serverTimestamp(),
+         LastMessageAt: serverTimestamp(),
+         messagecount: 0
+       };
+
+       const docRef = await addDoc(collection(db,'chatSession'), newSession)
+       setCurrentSessionId(docRef.id);
+       messages([])
+
+       console.log('New Session Created :', docRef.id)
+  } catch(error) {
+    console.log("Failed creating new chat!")
+  } finally {
+    setIsCreatingNewSession(false)
+  }
+};
+
+const loadChatSession = () =>{
+  if(!session?.uid) return;
+
+    const q = 
+    query(collection(db, 'chatSession'),
+    where("session.uid", '==', docRef.id),
+    orderBy("timestamp", "asc")
+  
+  );
+
+  // updating the chat list in real-time
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const sessionList = [];
+        querySnapshot.forEach((doc) => {
+            sessionList.push({
+              id: doc.id,
+              ...doc.data()
+
+  });
+  setChatSessions(sessionList);
+// select first chat if none is selected !
+  if(!currentSessionId && sessionList.length > 0){
+    setChatSessions(sessionList[0].id);
+  }
+  });
+  return unsubscribe; 
+
+});
+  
+ const deleteSession = (sessionId) =>{
+  if(!session?.uid) return ;
+
+  try{
+    await deleteDoc(doc(db,"chatSessions",sessionId));
+
+    
+  }
+ }
+  
+}
+// Switch to a different session
+const switchToSession = (sessionId) =>{
+  setCurrentSessionId(sessionId);
+}
+
+
+
 if(!session?.uid) {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
