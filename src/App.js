@@ -68,7 +68,7 @@ export default function AISalesAgent() {
     //listening for messages 
     useEffect(()=> {
     // if no user dont return anything
-      if(!session?.uid){
+      if(!session?.uid || !currentSessionId){
         return ;
       }
 
@@ -78,7 +78,7 @@ export default function AISalesAgent() {
          query(collection(db, "messages"),
          // filter message by user ID OR ai-bot
          where("userId", "in", [session.uid, "ai-bot"]),
-         where("userId", '==', currentSessionIdsessionId),
+         where("sessionId", '==', currentSessionId), // Fixed: was userId
          orderBy("timestamp", "asc"));
       
     // real-time listener
@@ -101,12 +101,13 @@ export default function AISalesAgent() {
       return unsubscribe;
     },[session?.uid,currentSessionId]) // re-run when user changes !
 
-  // creating a session for new users
+  // creating a session for new users - FIXED: Added null check
   useEffect(()=> {
-  if(session.uid && chatSessions.length === 0 && !isCreatingSession){
+  if(session?.uid && chatSessions.length === 0 && !isCreatingSession){
         createNewSession();
   }
-},[session.uid, chatSessions.length, isCreatingSession])
+},[session?.uid, chatSessions.length, isCreatingSession]) // Fixed: session.uid to session?.uid
+
     const sendMessage = async(e) => {
       e.preventDefault();
       
@@ -130,7 +131,7 @@ export default function AISalesAgent() {
           userName: session.displayName,
         });
 
-        await updateDoc(doc(db,'chatSession',currentSessionId),{
+        await updateDoc(doc(db,'chatSessions',currentSessionId),{ // Fixed: chatSession to chatSessions
           lastMessageAt:serverTimestamp(),
           messageCount:messages.length + 1
         })
@@ -156,7 +157,7 @@ export default function AISalesAgent() {
           userName: "AI Sales Agent",
         });
 
-         await updateDoc(doc(db,'chatSession',currentSessionId),{
+         await updateDoc(doc(db,'chatSessions',currentSessionId),{ // Fixed: chatSession to chatSessions
           lastMessageAt:serverTimestamp(),
           messageCount:messages.length + 2
         })
@@ -247,7 +248,7 @@ export default function AISalesAgent() {
              messageCount: 0
            };
 
-           const docRef = await addDoc(collection(db,'chatSession'), newSession)
+           const docRef = await addDoc(collection(db,'chatSessions'), newSession) // Fixed: chatSession to chatSessions
            setCurrentSessionId(docRef.id);
            setMessages([])
 
@@ -263,7 +264,7 @@ export default function AISalesAgent() {
       if(!session?.uid) return;
 
         const q = 
-        query(collection(db, 'chatSession'),
+        query(collection(db, 'chatSessions'), // Fixed: chatSession to chatSessions
         where("userId", '==', session.uid), // Fixed: was "session.uid"
         orderBy("createdAt", "desc") // Fixed: was "timestamp"
       );
@@ -290,7 +291,7 @@ export default function AISalesAgent() {
       if(!session?.uid) return ;
 
       try{
-        await deleteDoc(doc(db,"chatSessions",sessionId));
+        await deleteDoc(doc(db,"chatSessions",sessionId)); // Fixed: chatSession to chatSessions
 
         if(currentSessionId === sessionId) {
           const remainingSessions = chatSessions.filter((c)=> c.id !== sessionId) 
@@ -316,7 +317,7 @@ export default function AISalesAgent() {
      if(!session?.uid) return;
 
      try{
-      await updateDoc(doc(db,"chatSessions", sessionId), { 
+      await updateDoc(doc(db,"chatSessions", sessionId), { // Fixed: chatSession to chatSessions
         title: newTitle
       });
         console.log(" Chat Title Updated! ", sessionId)
@@ -351,9 +352,72 @@ export default function AISalesAgent() {
     
     return (
         <div className="min-h-screen bg-white p-6 flex items-center justify-center">
-          <div className="w-full max-w-5xl h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden border">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 p-8">
+          <div className="w-full max-w-7xl h-[90vh] bg-white rounded-3xl shadow-2xl flex overflow-hidden border">
+            
+            {/* Sidebar - Chat Sessions */}
+            <div className="w-80 bg-gray-50 border-r border-gray-200 flex flex-col">
+              {/* Sidebar Header */}
+              <div className="p-6 border-b border-gray-200">
+                <button
+                  onClick={createNewSession}
+                  disabled={isCreatingSession}
+                  className="w-full bg-black text-white py-3 px-4 rounded-2xl hover:bg-gray-800 transition-all duration-200 font-medium text-sm disabled:opacity-50"
+                >
+                  {isCreatingSession ? 'Creating...' : '+ New Chat'}
+                </button>
+              </div>
+
+              {/* Sessions List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {chatSessions.map((chatSession) => (
+                  <div
+                    key={chatSession.id}
+                    className={`group relative p-4 rounded-xl cursor-pointer transition-all duration-200 ${
+                      currentSessionId === chatSession.id
+                        ? 'bg-white shadow-sm border border-gray-200'
+                        : 'hover:bg-white hover:shadow-sm'
+                    }`}
+                    onClick={() => switchToSession(chatSession.id)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-gray-900 truncate">
+                          {chatSession.title || 'New Chat'}
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {chatSession.messageCount || 0} messages
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {chatSession.lastMessageAt?.toDate?.()?.toLocaleDateString() || 'Today'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(chatSession.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-1 rounded"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {chatSessions.length === 0 && !isCreatingSession && (
+                  <div className="text-center py-8 text-gray-500 text-sm">
+                    No chat sessions yet.
+                    <br />
+                    Create your first chat!
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Main Chat Area */}
+            <div className="flex-1 flex flex-col">
+              {/* Header */}
+              <div className="bg-white border-b border-gray-200 p-8">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center">
@@ -374,10 +438,10 @@ export default function AISalesAgent() {
                   </button>
                 </div>
               </div>
-            </div>
+              </div>
 
-            {/* Messages Container */}
-            <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-gray-50">
+              {/* Messages Container */}
+              <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-gray-50">
               {messages.map((message) => (
                 <div key={message.id} className={message.sender === 'user' ? "flex justify-end" : "flex justify-start"}>
                   <div className="relative group">
@@ -431,10 +495,10 @@ export default function AISalesAgent() {
                 </div>
               )}
                <div ref={messagesEndRef} />
-            </div>
+              </div>
 
-            {/* Input Area */}
-            <div className="bg-white border-t border-gray-200 p-8">
+              {/* Input Area */}
+              <div className="bg-white border-t border-gray-200 p-8">
               <div className="flex gap-4">
                 <textarea
                   onKeyPress={handleKeyPress}
@@ -450,6 +514,7 @@ export default function AISalesAgent() {
                   <Send size={22} />
                 </button>
                
+              </div>
               </div>
             </div>
           </div>
