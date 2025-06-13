@@ -65,7 +65,7 @@ export default function AISalesAgent() {
 
     },[session?.uid])
 
-    //listening for messages - FIXED TO INCLUDE AI MESSAGES
+    //listening for messages 
     useEffect(()=> {
     // if no user dont return anything
       if(!session?.uid){
@@ -110,7 +110,7 @@ export default function AISalesAgent() {
     const sendMessage = async(e) => {
       e.preventDefault();
       
-      if(!session?.uid || !newMessage.trim()) {
+      if(!session?.uid || !newMessage.trim() || !currentSessionId) {
         console.log("user not signed in or empty message");
         return;
       }
@@ -125,9 +125,23 @@ export default function AISalesAgent() {
           text: userMessage,
           sender: "user",
           timestamp: serverTimestamp(),
+          sessionId:currentSessionId,
           userId: session.uid,
           userName: session.displayName,
         });
+
+        await updateDoc(doc(db,'chatSession',currentSessionId),{
+          lastMessageAt:serverTimestamp(),
+          messageCount:messages.length + 1
+        })
+
+        const currentSession = chatSessions.find((c)=> c.id === currentSessionId)
+         if(currentSession && currentSession.title === 'New Chat' && messages.length === 0) {
+          const autoTitle = userMessage.length > 30
+          ? userMessage.substring(0, 30) + "..." 
+          : userMessage
+         await  updateSessionTitle(currentSessionId,autoTitle)
+         }
 
         //  Get AI response
         const aiResponse = await getAIResponse(userMessage);
@@ -137,9 +151,15 @@ export default function AISalesAgent() {
           text: aiResponse,
           sender: "ai",
           timestamp: serverTimestamp(),
+          sessionId:currentSessionId,
           userId: "ai-bot", 
           userName: "AI Sales Agent",
         });
+
+         await updateDoc(doc(db,'chatSession',currentSessionId),{
+          lastMessageAt:serverTimestamp(),
+          messageCount:messages.length + 2
+        })
         
       } catch (error) {
         console.error("Error sending message:", error);
@@ -149,7 +169,7 @@ export default function AISalesAgent() {
       }
     }
 
-    // FIXED DELETE MESSAGE FUNCTION
+    
     const deleteMessage = async (message) => {
       if (!session?.uid) return; 
 
@@ -273,7 +293,7 @@ export default function AISalesAgent() {
         await deleteDoc(doc(db,"chatSessions",sessionId));
 
         if(currentSessionId === sessionId) {
-          const remainingSessions = chatSessions.filter((c)=> c.id !== sessionId) // Fixed: was != 
+          const remainingSessions = chatSessions.filter((c)=> c.id !== sessionId) 
           if(remainingSessions.length > 0 ){
             setCurrentSessionId(remainingSessions[0].id)
           } else {
@@ -292,11 +312,11 @@ export default function AISalesAgent() {
       setCurrentSessionId(sessionId);
     }
 
-    const updateSessionTitle = async (sessionId, newTitle) => { // Fixed: added newTitle parameter
+    const updateSessionTitle = async (sessionId, newTitle) => { 
      if(!session?.uid) return;
 
      try{
-      await updateDoc(doc(db,"chatSessions", sessionId), { // Fixed: moved sessionId inside doc()
+      await updateDoc(doc(db,"chatSessions", sessionId), { 
         title: newTitle
       });
         console.log(" Chat Title Updated! ", sessionId)
@@ -306,7 +326,7 @@ export default function AISalesAgent() {
       }
     }
 
-    // MOVED THE CONDITIONAL RENDERING INSIDE THE COMPONENT
+   
     if(!session?.uid) {
       return (
         <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -328,7 +348,7 @@ export default function AISalesAgent() {
       )
     }
 
-    // MAIN COMPONENT RETURN
+    
     return (
         <div className="min-h-screen bg-white p-6 flex items-center justify-center">
           <div className="w-full max-w-5xl h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden border">
