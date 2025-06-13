@@ -52,6 +52,19 @@ export default function AISalesAgent() {
         }
     };
 
+    useEffect(()=> {
+      if(!session?.uid){
+        setCurrentSessionId(null)
+        setMessages([])
+        setChatSessions([])
+          return;
+      }
+
+      const unsubscribe = loadChatSession();
+      return unsubscribe;
+
+    },[session?.uid])
+
     //listening for messages - FIXED TO INCLUDE AI MESSAGES
     useEffect(()=> {
     // if no user dont return anything
@@ -65,6 +78,7 @@ export default function AISalesAgent() {
          query(collection(db, "messages"),
          // filter message by user ID OR ai-bot
          where("userId", "in", [session.uid, "ai-bot"]),
+         where("userId", '==', currentSessionIdsessionId),
          orderBy("timestamp", "asc"));
       
     // real-time listener
@@ -85,8 +99,14 @@ export default function AISalesAgent() {
 
      const unsubscribe = setUpMessageListener()
       return unsubscribe;
-    },[session?.uid]) // re-run when user changes !
+    },[session?.uid,currentSessionId]) // re-run when user changes !
 
+  // creating a session for new users
+  useEffect(()=> {
+  if(session.uid && chatSessions.length === 0 && !isCreatingSession){
+        createNewSession();
+  }
+},[session.uid, chatSessions.length, isCreatingSession])
     const sendMessage = async(e) => {
       e.preventDefault();
       
