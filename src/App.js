@@ -330,7 +330,7 @@ export default function AISalesAgent() {
    
     if(!session?.uid) {
       return (
-        <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="min-h-screen bg-black flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-12 shadow-2xl max-w-md w-full text-center border">
             <div className="mb-8">
               <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center mx-auto mb-6">
