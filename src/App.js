@@ -337,6 +337,87 @@ export default function AISalesAgent() {
       communicationStyle:"Professional",
       budgetRange: "$10k-15k"
     }
+   /**
+ * Creates a new user profile in Firestore
+ * @param {Object} profileData - The profile data to save
+ * @returns {Promise} - Resolves when profile is created
+ */
+    const createUserProfile = async() =>{
+        if(!session?.uid) {
+          throw new Error('User not authenticated')
+        }
+    
+
+    try {
+      await setDoc(doc(db, "userProfiles", session.uid ),{
+      userId: session.uid,
+      ...profileData,
+      createdAt:serverTimestamp(),
+      updatedAt: serverTimestamp()
+      })
+
+      console.log('User Profile Created Successfully')
+    }catch(error) {
+    console.error("Failed to create user profile", error)
+    } 
+    throw error; 
+  }
+
+   /**
+ * Creates a new user profile in Firestore
+ * @param {Object} profileData - The profile data to save
+ * @returns {Promise} - Resolves when profile is created
+ */
+
+    const updateUserProfile = async () => {
+      if(!session?.uid){
+        throw new Error("User not authenticated")
+      }
+
+      try{
+        await updateDoc(doc(db,'userProfiles',session.uid),{
+          userId: session.uid,
+          ...profileData, 
+          updatedAt: serverTimestamp()
+           })
+
+          console.log("Successfully updated user profile")
+       
+      } catch(error) {
+        console.error("Failed to update user profile")
+      }
+      throw error
+    }
+
+    /**
+ * Loads user profile from Firestore
+ * @returns {Promise<Object|null>} - Returns profile data or null if not found
+ */
+
+    const loadUserProfile = async () =>{
+      if(!session?.uid){
+        throw new Error ("User not authenticated")
+      }
+        try {
+         const profileDoc =  await getDoc(doc(db,'userProfiles', session.uid))
+
+         if(profileDoc.exists()){
+          console.log("User profile exists")
+          return ({id:profileDoc.id, ...profileDoc.data()})
+          } else {
+            console.log("User profile not found!")
+          } 
+
+          } catch (error) {
+            console.error("Could not fetch user profile")
+        }
+      
+    }
+
+    
+
+
+
 
    
     if(!session?.uid) {
