@@ -324,6 +324,20 @@ export default function AISalesAgent() {
       }
     }
 
+    const userProfileExample = {
+      userId: "user123",
+      fullName: "John Smith",
+      email: "john@techcorp.com", 
+      phone: "+1234567890",
+      company: "TechCorp",
+      jobTitle: "CTO", 
+
+      //preferences
+      interests: ["Software Solutions", "Consulting"],
+      communicationStyle:"Professional",
+      budgetRange: "$10k-15k"
+    }
+
    
     if(!session?.uid) {
       return (
