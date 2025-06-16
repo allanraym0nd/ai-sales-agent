@@ -3,7 +3,7 @@ import { db,auth, } from './firebase';
 import { useState,useEffect,useRef } from 'react';
 import { signOut,signInWithPopup,getAuth,GoogleAuthProvider, onAuthStateChanged} from 'firebase/auth';
 import { Send, Bot, User, LogOut } from 'lucide-react';
-import { addDoc,collection,onSnapshot,orderBy,query,serverTimestamp,where,deleteDoc,doc,getDoc,limit,updateDoc } from 'firebase/firestore';
+import { addDoc,collection,onSnapshot,orderBy,query,serverTimestamp,where,deleteDoc,doc,getDoc,limit,updateDoc,setDoc } from 'firebase/firestore';
 
 
 export default function AISalesAgent() {
