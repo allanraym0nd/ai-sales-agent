@@ -190,28 +190,25 @@ export default function AISalesAgent() {
     const getAIResponse = async(userMessage) => {
     try {
 
-    console.log("API Key:", process.env.REACT_APP_OPENAI_API_KEY ? "Present" : "Missing");
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    console.log("Gemini API Key", process.env.REACT_APP_OPENAI_API_KEY ? "Present" : "Missing");
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`, {
       method:'POST', 
       headers: {
         'Content-type': 'application/json',
-        'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
+        // 'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
       },
-      body: JSON.stringify({
-        model:'gpt-3.5-turbo',
-        messages: [
-          {
-            role:'system',
-            content:"you are a helpful AI sales assistant. Help customers find the right products and answer their questions in a friendly, professional manner."
-          },
-          {
-            role:'user',
-            content:userMessage
-          }
-
-        ],
-        max_tokens: 150,
-        temperature: 0.7
+        body: JSON.stringify({
+          contents: [{
+          parts: [{
+            text: `You are a helpful AI sales assistant. Help customers find the right products and answer their questions in a friendly, professional manner.\n\nUser: ${userMessage}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 150,
+          topP: 0.8,
+          topK: 40
+        }
       })
     });
       const data = await response.json();
@@ -219,9 +216,9 @@ export default function AISalesAgent() {
       if(!response.ok) {
         throw new Error(data.error?.message || 'Failed to get AI response')
       }
-      return data.choices[0].message.content
+      return data.candidates[0].content.parts[0].text;
     } catch(error) {
-      console.error('Error getting AI response')
+      console.error('Error getting AI response',error)
       return 'Sorry, im having trouble responding right now. Please try again!'
 
     }
@@ -351,7 +348,7 @@ export default function AISalesAgent() {
 
     
     return (
-        <div className="min-h-screen bg-white p-6 flex items-center justify-center">
+        <div className="min-h-screen bg-black p-6 flex items-center justify-center">
           <div className="w-full max-w-7xl h-[90vh] bg-white rounded-3xl shadow-2xl flex overflow-hidden border">
             
             {/* Sidebar - Chat Sessions */}
