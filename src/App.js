@@ -395,9 +395,9 @@ export default function AISalesAgent() {
  */
 
     const loadUserProfile = async () =>{
-      if(!session?.uid){
-        throw new Error ("User not authenticated")
-      }
+      if(!session?.uid) 
+        return null ; 
+
         try {
          const profileDoc =  await getDoc(doc(db,'userProfiles', session.uid))
 
@@ -410,15 +410,30 @@ export default function AISalesAgent() {
 
           } catch (error) {
             console.error("Could not fetch user profile")
+            return null; 
         }
       
     }
 
-    
+    /**
+ * Deletes user profile from Firestore
+ * @returns {Promise} - Resolves when profile is deleted
+ */
 
+    const deleteUserProfile = async() => {
+        if(!session?.uid)  {
+          throw new Error("User not authenticated")
+        }
 
+        try{
+          await deleteDoc(doc(db, 'userProfiles', session.uid))
 
-
+          console.log("Successfully deleted user profile")
+        } catch (error) {
+          console.error("Failed to delete user error", error);
+          throw error; 
+        }
+    }
    
     if(!session?.uid) {
       return (
