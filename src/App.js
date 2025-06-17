@@ -68,21 +68,18 @@ export default function AISalesAgent() {
         // Handle form submission
         const handleSaveProfile = async (e) => {
             e.preventDefault();
-          try {
-            const existingProfile = loadUserProfile()
-            
-             if(existingProfile){
-            
-                await updateUserProfile(userProfile);
-                console.log('Profile updated successfully!')
+            try {
+                const existingProfile = await loadUserProfile();
                 
-             } else {
-              await createUserProfile(userProfile)
-              console.log('User profile Created!')
-             }
-             setShowProfileModal(false);
+                if (existingProfile) {
+                    await updateUserProfile(userProfile);
+                    console.log('Profile updated successfully!');
+                } else {
+                    await createUserProfile(userProfile);
+                    console.log('User profile Created!');
+                }
+                setShowProfileModal(false);
                 alert("Profile saved successfully!");
-
 
             } catch (error) {
                 console.error("Error saving profile:", error);
@@ -657,18 +654,33 @@ export default function AISalesAgent() {
             loadUserProfile().then(profile => {
                 if (profile) {
                     setUserProfile({
-                      fullName: profile.fullName || '',
-                    email: profile.email || session.email || '',
-                    phone: profile.phone || '',
-                    company: profile.company || '',
-                    jobTitle: profile.jobTitle || '',
-                    interests: profile.interests || [],
-                    budgetRange: profile.budgetRange || '',
-                    communicationStyle: profile.communicationStyle || 'Professional'
+                        fullName: profile.fullName || '',
+                        email: profile.email || session.email || '',
+                        phone: profile.phone || '',
+                        company: profile.company || '',
+                        jobTitle: profile.jobTitle || '',
+                        interests: profile.interests || [],
+                        budgetRange: profile.budgetRange || '',
+                        communicationStyle: profile.communicationStyle || 'Professional'
                     });
                     console.log('Profile loaded successfully')
-                }else {
-                  setUserProfile({
+                } else {
+                    setUserProfile({
+                        fullName: session.displayName || '',
+                        email: session.email || '',
+                        phone: '',
+                        company: '',
+                        jobTitle: '',
+                        interests: [],
+                        budgetRange: '',
+                        communicationStyle: 'Professional'
+                    })
+                    console.log('No profile found, using default values')
+                }
+            }).catch(error => {
+                console.error('Failed to load user profile', error)
+
+                setUserProfile({
                     fullName: session.displayName || '',
                     email: session.email || '',
                     phone: '',
@@ -677,23 +689,7 @@ export default function AISalesAgent() {
                     interests: [],
                     budgetRange: '',
                     communicationStyle: 'Professional'
-                  })
-                  console.log('No profile found, using default values')
-                }
-            }).catch(error => {
-              console.error('Failed to load user profile')
-
-              setUserProfile({
-                fullName: session.displayName || '',
-                    email: session.email || '',
-                    phone: '',
-                    company: '',
-                    jobTitle: '',
-                    interests: [],
-                    budgetRange: '',
-                    communicationStyle: 'Professional'
-
-              })
+                })
             })
         }
     }, [session?.uid]);
@@ -722,6 +718,7 @@ export default function AISalesAgent() {
     
     return (
         <div className="min-h-screen bg-black p-6 flex items-center justify-center">
+            <ProfileModal />
             <div className="w-full max-w-7xl h-[90vh] bg-white rounded-3xl shadow-2xl flex overflow-hidden border">
                 
                 {/* Sidebar - Chat Sessions */}
@@ -820,81 +817,104 @@ export default function AISalesAgent() {
                     {/* Messages Container */}
                     <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-gray-50">
                         {messages.map((message) => (
-                            <div key={message.id} className={message.sender === 'user' ? "flex justify-end" : "flex justify-start"}>
-                                <div className="relative group">
-                                    <div className={`max-w-sm lg:max-w-lg px-6 py-4 rounded-3xl shadow-sm ${
-                                        message.sender === 'user' 
-                                            ? "bg-black text-white" 
-                                            : "bg-white text-gray-900 border border-gray-200"
-                                    }`}>
-                                        <div className="flex items-start gap-4">
-                                            {message.sender === 'user' ? (
-                                                <User size={18} className="mt-1 opacity-80" />
-                                            ) : (
-                                                <Bot size={18} className="mt-1 text-gray-600" />
-                                            )}
-                                            <div className="flex-1">
-                                                <p className="text-sm leading-relaxed font-light">{message.text}</p>
-                                                <p className={`text-xs mt-3 font-light ${
-                                                    message.sender === 'user' 
-                                                        ? "text-gray-300" 
-                                                        : "text-gray-400"
-                                                }`}>
-                                                    {message.timestamp?.toDate?.()?.toLocaleTimeString() || 'Just now'}
-                                                </p>
-                                            </div>
-                                        </div>
+                            <div key={message.id} className={`flex gap-4 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                {message.sender === 'ai' && (
+                                    <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center flex-shrink-0">
+                                        <Bot size={16} className="text-white" />
                                     </div>
-                    {message.sender === 'user' && message.userId === session.uid && (
-                      <button
-                        onClick={() => deleteMessage(message)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-              
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-gray-200 max-w-xs px-6 py-4 rounded-3xl shadow-sm">
-                    <div className="flex items-center gap-4">
-                      <Bot size={18} className="text-gray-600" />
-                      <div className="flex space-x-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-               <div ref={messagesEndRef} />
-              </div>
+                                )}
+                                
+                                <div className={`max-w-[70%] rounded-2xl p-4 ${
+                                    message.sender === 'user'
+                                        ? 'bg-black text-white'
+                                        : 'bg-white text-gray-900 shadow-sm border border-gray-200'
+                                }`}>
+                                    <p className="text-sm leading-relaxed">{message.text}</p>
+                                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200 border-opacity-20">
+                                        <span className={`text-xs ${
+                                            message.sender === 'user' ? 'text-gray-300' : 'text-gray-500'
+                                        }`}>
+                                            {message.sender === 'user' ? 'You' : 'AI Sales Agent'}
+                                        </span>
+                                        {message.sender === 'user' && (
+                                            <button
+                                                onClick={() => deleteMessage(message)}
+                                                className="text-xs text-gray-300 hover:text-white transition-colors opacity-70 hover:opacity-100"
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
 
-              {/* Input Area */}
-              <div className="bg-white border-t border-gray-200 p-8">
-              <div className="flex gap-4">
-                <textarea
-                  onKeyPress={handleKeyPress}
-                  value={newMessage}
-                  onChange={(e)=> setNewMessage(e.target.value)}
-                  placeholder="Type your message here..."
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:bg-white resize-none transition-all duration-200 font-light"
-                  rows={1}
-                />
-                <button 
-                  onClick={sendMessage}
-                  className="bg-black text-white px-8 py-4 rounded-2xl hover:bg-gray-800 transition-all duration-200 shadow-sm">
-                  <Send size={22} />
-                </button>
-               
-              </div>
-              </div>
+                                {message.sender === 'user' && (
+                                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <User size={16} className="text-gray-600" />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        
+                        {/* Loading indicator */}
+                        {isLoading && (
+                            <div className="flex gap-4 justify-start">
+                                <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Bot size={16} className="text-white" />
+                                </div>
+                                <div className="max-w-[70%] rounded-2xl p-4 bg-white text-gray-900 shadow-sm border border-gray-200">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Welcome message for new sessions */}
+                        {messages.length === 0 && !isLoading && (
+                            <div className="flex gap-4 justify-start">
+                                <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Bot size={16} className="text-white" />
+                                </div>
+                                <div className="max-w-[70%] rounded-2xl p-4 bg-white text-gray-900 shadow-sm border border-gray-200">
+                                    <p className="text-sm leading-relaxed">
+                                        Hello! I'm your AI Sales Agent. I'm here to help you find the perfect products and services for your needs. 
+                                        How can I assist you today?
+                                    </p>
+                                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200">
+                                        <span className="text-xs text-gray-500">AI Sales Agent</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        <div ref={messagesEndRef} />
+                    </div>
+
+                    {/* Message Input */}
+                    <div className="bg-white border-t border-gray-200 p-6">
+                        <form onSubmit={sendMessage} className="flex gap-4">
+                            <input
+                                type="text"
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder="Type your message..."
+                                className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-gray-400 focus:bg-white transition-all text-sm"
+                                disabled={isLoading}
+                            />
+                            <button
+                                type="submit"
+                                disabled={!newMessage.trim() || isLoading}
+                                className="bg-black text-white px-6 py-4 rounded-2xl hover:bg-gray-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                            >
+                                <Send size={18} />
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-      );
+    );
 }
