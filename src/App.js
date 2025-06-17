@@ -43,21 +43,20 @@ export default function AISalesAgent() {
         "$100k+"
     ] 
 
-    // Profile Modal Component
     const ProfileModal = () => {
         if (!showProfileModal) return null;
 
-        // Handle interest checkbox changes
+    
         const handleInterestChange = (interest) => {
             setUserProfile(prev => ({
                 ...prev,
                 interests: prev.interests.includes(interest)
-                    ? prev.interests.filter(i => i !== interest) // Remove if already selected
-                    : [...prev.interests, interest] // Add if not selected
+                    ? prev.interests.filter(i => i !== interest) 
+                    : [...prev.interests, interest] 
             }));
         };
 
-        // Handle input field changes
+        
         const handleInputChange = (field, value) => {
             setUserProfile(prev => ({
                 ...prev,
@@ -65,7 +64,6 @@ export default function AISalesAgent() {
             }));
         };
 
-        // Handle form submission
         const handleSaveProfile = async (e) => {
             e.preventDefault();
             try {
@@ -906,7 +904,7 @@ export default function AISalesAgent() {
                             />
                             <button
                                 type="submit"
-                                disabled={!newMessage.trim() || isLoading}
+                                // disabled={!newMessage.trim() || isLoading}
                                 className="bg-black text-white px-6 py-4 rounded-2xl hover:bg-gray-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                             >
                                 <Send size={18} />
