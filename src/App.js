@@ -378,7 +378,7 @@ export default function AISalesAgent() {
             }
 
             //  Get AI response
-            const aiResponse = await getAIResponse(userMessage);
+            const aiResponse = await getAIResponse(userMessage, userProfile);
             
             //  Save AI message
             await addDoc(collection(db, "messages"), {
@@ -419,27 +419,27 @@ export default function AISalesAgent() {
         }
     }
 
-    const getAIResponse = async (userMessage) => {
+    const getAIResponse = async (userMessage, userProfile) => {
         try {
 
             console.log("Gemini API Key", process.env.REACT_APP_GEMINI_API_KEY ? "Present" : "Missing");
 
-            const salesPrompt = `You are a helpful AI sales assistant.
+            const salesPrompt = `You are a helpful AI sales assistant for ${userProfile.name|| 'Our beloved Customer'} ${userProfile.company ? `from ${userProfile.company}` : ''}
             
-            Your role is to:
-            - Help customers find the perfect products for their needs
-            - Provide detailed product information and recommendations
-            - Answer questions about pricing, features, and benefits
-            - Guide customers through the buying process
-            - Identify customer pain points and offer solutions
-            - Be friendly, professional, and consultative (not pushy)
+                Customer Profile: 
+                -Name: ${userProfile.fullName || 'Not Provided'}
+                -Company: ${userProfile.company || 'Not Provided'}
+                -Job Title: ${userProfile.jobTitle || 'Not Provided'}
+                -Interests: ${userProfile.interests.length > 0 ? userProfile.interests.join(', ' ) :  'Not Provided'}
+                -Budget Range: ${userProfile.budgetRange || 'Not Provided'}
+                -Communication Style: ${userProfile.communicationStyle || 'Professional'}
 
-            Available products/services:
-            - [List your main products/services here]
-            - [Include key features and benefits]
-            - [Mention any current promotions]
-
-            Always ask follow-up questions to better understand customer needs and provide personalized recommendations.
+                    Based on this information : 
+                    -Tailor your responses to their interests: ${userProfile.interests.join(', ')}
+                    -Keep their budget range in mind: ${userProfile.budgetRange}
+                    -Use a ${userProfile.communicationStyle.toLowerCase} tone
+                    -${userProfile.budgetRange === 'under $10k' ? 'Provide cost-effective solutions.' : ''}  
+                    -Make relevant product recommendations
             
              CustomerMessage: ${userMessage}`
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`, {
