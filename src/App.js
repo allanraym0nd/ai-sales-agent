@@ -1,9 +1,9 @@
 import React from 'react';
 import { db, auth } from './firebase';
 import { useState, useEffect, useRef } from 'react';
-import { signOut, signInWithPopup, getAuth, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
-import { Send, Bot, User, LogOut, Settings } from 'lucide-react';
-import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp, where, deleteDoc, doc, getDoc, limit, updateDoc, setDoc } from 'firebase/firestore';
+import { signOut, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
+import { Send, Bot, User, LogOut, Settings, Paperclip, X } from 'lucide-react';
+import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp, where, deleteDoc, doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 
 export default function AISalesAgent() {
     const [messages, setMessages] = useState([])
@@ -14,8 +14,8 @@ export default function AISalesAgent() {
     const [currentSessionId, setCurrentSessionId] = useState(null)
     const [isCreatingSession, setIsCreatingSession] = useState(false)
     const [showProfileModal, setShowProfileModal] = useState(false)
-    const [uploadedfile, setUploadedFile] = useState(null)
-    const [isUploadingFile,setIsUploadingFile] = useState(false)
+    const [uploadedFile, setUploadedFile] = useState(null)
+    const [isUploadingFile, setIsUploadingFile] = useState(false)
     const [userProfile, setUserProfile] = useState({
         fullName: '',
         email: '',
@@ -48,7 +48,6 @@ export default function AISalesAgent() {
     const ProfileModal = () => {
         if (!showProfileModal) return null;
 
-    
         const handleInterestChange = (interest) => {
             setUserProfile(prev => ({
                 ...prev,
@@ -58,7 +57,6 @@ export default function AISalesAgent() {
             }));
         };
 
-        
         const handleInputChange = (field, value) => {
             setUserProfile(prev => ({
                 ...prev,
@@ -264,7 +262,7 @@ export default function AISalesAgent() {
 
     const signUserIn = async () => {
         const provider = new GoogleAuthProvider();
-        const signInWithGoogle = await signInWithPopup(auth, provider);
+        await signInWithPopup(auth, provider);
     }
 
     const signUserOut = async () => {
@@ -285,6 +283,33 @@ export default function AISalesAgent() {
                 block: 'end'
             });
         }
+    };
+
+    const loadChatSession = () => {
+        if (!session?.uid) return;
+
+        const q = 
+            query(collection(db, 'chatSessions'),
+            where("userId", '==', session.uid),
+            orderBy("createdAt", "desc")
+        );
+
+        // updating the chat list in real-time
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const sessionList = [];
+            querySnapshot.forEach((doc) => {
+                sessionList.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            setChatSessions(sessionList);
+            // select first chat if none is selected !
+            if (!currentSessionId && sessionList.length > 0) {
+                setCurrentSessionId(sessionList[0].id);
+            }
+        });
+        return unsubscribe; 
     };
 
     useEffect(() => {
@@ -337,6 +362,31 @@ export default function AISalesAgent() {
     }, [session?.uid, currentSessionId]) // re-run when user changes !
 
     // creating a session for new users - FIXED: Added null check
+    const createNewSession = async () => {
+        if (!session?.uid) return; 
+
+        setIsCreatingSession(true);
+        try {
+            const newSession = {
+                userId: session.uid,
+                title: 'New Chat',
+                createdAt: serverTimestamp(),
+                lastMessageAt: serverTimestamp(),
+                messageCount: 0
+            };
+
+            const docRef = await addDoc(collection(db, 'chatSessions'), newSession)
+            setCurrentSessionId(docRef.id);
+            setMessages([])
+
+            console.log('New Session Created :', docRef.id)
+        } catch (error) {
+            console.error("Failed creating new chat!")
+        } finally {
+            setIsCreatingSession(false)
+        }
+    };
+
     useEffect(() => {
         if (session?.uid && chatSessions.length === 0 && !isCreatingSession) {
             createNewSession();
@@ -426,7 +476,7 @@ export default function AISalesAgent() {
 
             console.log("Gemini API Key", process.env.REACT_APP_GEMINI_API_KEY ? "Present" : "Missing");
 
-            const salesPrompt = `You are a helpful AI sales assistant for ${userProfile.name|| 'Our beloved Customer'} ${userProfile.company ? `from ${userProfile.company}` : ''}
+            let salesPrompt = `You are a helpful AI sales assistant for ${userProfile.name|| 'Our beloved Customer'} ${userProfile.company ? `from ${userProfile.company}` : ''}
             
                 Customer Profile: 
                 -Name: ${userProfile.fullName || 'Not Provided'}
@@ -439,30 +489,50 @@ export default function AISalesAgent() {
                     Based on this information : 
                     -Tailor your responses to their interests: ${userProfile.interests.join(', ')}
                     -Keep their budget range in mind: ${userProfile.budgetRange}
-                    -Use a ${userProfile.communicationStyle.toLowerCase} tone
+                    -Use a ${userProfile.communicationStyle.toLowerCase()} tone
                     -${userProfile.budgetRange === 'under $10k' ? 'Provide cost-effective solutions.' : ''}  
-                    -Make relevant product recommendations
+                    -Make relevant product recommendations`
+
+                    if(uploadedFile && uploadedFile.type === 'pdf'){
+                        salesPrompt += `\n\nThe customer has shared a document: "${uploadedFile.name}"\nDocument content:\n${uploadedFile.data}\n\nPlease analyze this document and incorporate insights into your response.`
+                    }
+                    if(uploadedFile && uploadedFile.type === 'image'){
+                        salesPrompt += `\n\nThe customer has shared an image: "${uploadedFile.name}". Please analyze the image and provide relevant insights.`;
+                    }
             
-             CustomerMessage: ${userMessage}`
+             salesPrompt += `\n\nCustomer Message: ${userMessage}`
+
+             const requestBody = {
+                contents: [{
+                    parts: [{
+                        text: salesPrompt
+                    }]
+                }],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 150,
+                    topP: 0.8,
+                    topK: 40
+                }
+             };
+
+             if(uploadedFile && uploadedFile.type === 'image') {
+                requestBody.contents[0].parts.push({
+                    inline_data: {
+                        mime_type: uploadedFile.mimeType, // Tells the API what kind of image it is
+                        data: uploadedFile.data.split(',')[1]
+                    }
+                })
+             }
+
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`, {
                 method: 'POST', 
                 headers: {
                     'Content-type': 'application/json',
                 },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: salesPrompt
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.7,
-                        maxOutputTokens: 150,
-                        topP: 0.8,
-                        topK: 40
-                    }
-                })
+                body: JSON.stringify(requestBody)
             });
+            
             const data = await response.json();
 
             if (!response.ok) {
@@ -482,59 +552,6 @@ export default function AISalesAgent() {
             sendMessage(e);
         }
     }
-
-    // creating a new chat Session
-    const createNewSession = async () => {
-        if (!session?.uid) return; 
-
-        setIsCreatingSession(true);
-        try {
-            const newSession = {
-                userId: session.uid,
-                title: 'New Chat',
-                createdAt: serverTimestamp(),
-                lastMessageAt: serverTimestamp(),
-                messageCount: 0
-            };
-
-            const docRef = await addDoc(collection(db, 'chatSessions'), newSession)
-            setCurrentSessionId(docRef.id);
-            setMessages([])
-
-            console.log('New Session Created :', docRef.id)
-        } catch (error) {
-            console.error("Failed creating new chat!")
-        } finally {
-            setIsCreatingSession(false)
-        }
-    };
-
-    const loadChatSession = () => {
-        if (!session?.uid) return;
-
-        const q = 
-            query(collection(db, 'chatSessions'),
-            where("userId", '==', session.uid),
-            orderBy("createdAt", "desc")
-        );
-
-        // updating the chat list in real-time
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const sessionList = [];
-            querySnapshot.forEach((doc) => {
-                sessionList.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
-            });
-            setChatSessions(sessionList);
-            // select first chat if none is selected !
-            if (!currentSessionId && sessionList.length > 0) {
-                setCurrentSessionId(sessionList[0].id);
-            }
-        });
-        return unsubscribe; 
-    };
       
     const deleteSession = async (sessionId) => {
         if (!session?.uid) return;
@@ -649,24 +666,6 @@ export default function AISalesAgent() {
         }
     }
 
-    /**
-     * Deletes user profile from Firestore
-     * @returns {Promise} - Resolves when profile is deleted
-     */
-    const deleteUserProfile = async () => {
-        if (!session?.uid) {
-            throw new Error("User not authenticated")
-        }
-
-        try {
-            await deleteDoc(doc(db, 'userProfiles', session.uid))
-            console.log("Successfully deleted user profile")
-        } catch (error) {
-            console.error("Failed to delete user profile", error);
-            throw error; 
-        }
-    }
-
     // Load user profile when user signs in
     useEffect(() => {
         if (session?.uid) {
@@ -713,8 +712,8 @@ export default function AISalesAgent() {
         }
     }, [session?.uid]);
 
-    const handlefileUpload = async() => {
-        const file = event.target.files[0]
+    const handleFileUpload = async(e) => {
+        const file = e.target.files[0]
         if(!file) return ; 
 
         if(file.size > 5 * 1024* 1024) {
@@ -725,25 +724,26 @@ export default function AISalesAgent() {
         setIsUploadingFile(true); 
 
         try {
-             if(file.type == "image/") {
+             if(file.type.startsWith('image/')) {
                 const base64 = await convertToBase64(file);
                 setUploadedFile({
                     name: file.name,
                     type: 'image',
                     data: base64,
-                    mimetype: file.type
+                    mimeType: file.type
                 })
-
-                if(file.type == "application/pdf"){
-                    const content = await extractPdfText ; 
-                    setUploadedFile({
-                        name:file.name,
-                        type: 'text',
-                        name: file.name
-                    })
-                } else {
-                    alert('Please upload an image (JPG, PNG) or PDF file')
-                }
+             } else if(file.type === "application/pdf"){
+                // For PDF, we'll just store the file info for now
+                // In a real app, you'd need a backend to process PDFs
+                setUploadedFile({
+                    name: file.name,
+                    type: 'pdf',
+                    data: 'PDF content would be extracted here',
+                    mimeType: file.type
+                })
+                alert('PDF upload is ready. Note: PDF text extraction requires backend processing.')
+             } else {
+                alert('Please upload an image (JPG, PNG) or PDF file')
              }
         } catch (error) {
             console.error("Could not upload selected file", error)
@@ -751,24 +751,21 @@ export default function AISalesAgent() {
         }finally {
             setIsUploadingFile(false)
         }
-
-         
     };
 
-    const convertToBase64 = () =>{
-        
-
-        }
-    const extractPdfText = () =>{
-
+    const convertToBase64 = (file) =>{
+        return new Promise((resolve,reject) => {
+            const fileReader = new FileReader()
+            fileReader.readAsDataURL(file);
+            fileReader.onload = () => resolve(fileReader.result)
+            fileReader.onerror = (error) => reject(error)
+        });
     }
 
-        const removeFileUpload = ()=> {
-            setUploadedFile(null);
-        }
+    const removeFileUpload = ()=> {
+        setUploadedFile(null);
+    }
 
-
-   
     if (!session?.uid) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center p-4">
@@ -815,7 +812,6 @@ export default function AISalesAgent() {
                             Profile Settings
                         </button>
                     </div>
-
                     {/* Sessions List */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-2">
                         {chatSessions.map((chatSession) => (
@@ -970,6 +966,14 @@ export default function AISalesAgent() {
                     {/* Message Input */}
                     <div className="bg-white border-t border-gray-200 p-6">
                         <form onSubmit={sendMessage} className="flex gap-4">
+
+                        
+                        
+
+
+
+
+
                             <input
                                 type="text"
                                 value={newMessage}
