@@ -423,6 +423,25 @@ export default function AISalesAgent() {
         try {
 
             console.log("Gemini API Key", process.env.REACT_APP_GEMINI_API_KEY ? "Present" : "Missing");
+
+            const salesPrompt = `You are a helpful AI sales assistant.
+            
+            Your role is to:
+            - Help customers find the perfect products for their needs
+            - Provide detailed product information and recommendations
+            - Answer questions about pricing, features, and benefits
+            - Guide customers through the buying process
+            - Identify customer pain points and offer solutions
+            - Be friendly, professional, and consultative (not pushy)
+
+            Available products/services:
+            - [List your main products/services here]
+            - [Include key features and benefits]
+            - [Mention any current promotions]
+
+            Always ask follow-up questions to better understand customer needs and provide personalized recommendations.
+            
+             CustomerMessage: ${userMessage}`
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`, {
                 method: 'POST', 
                 headers: {
@@ -431,7 +450,7 @@ export default function AISalesAgent() {
                 body: JSON.stringify({
                     contents: [{
                         parts: [{
-                            text: `You are a helpful AI sales assistant. Help customers find the right products and answer their questions in a friendly, professional manner.\n\nUser: ${userMessage}`
+                            text: salesPrompt
                         }]
                     }],
                     generationConfig: {
