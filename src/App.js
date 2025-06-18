@@ -14,6 +14,8 @@ export default function AISalesAgent() {
     const [currentSessionId, setCurrentSessionId] = useState(null)
     const [isCreatingSession, setIsCreatingSession] = useState(false)
     const [showProfileModal, setShowProfileModal] = useState(false)
+    const [uploadedfile, setUploadedFile] = useState(null)
+    const [isUploadingFile,setIsUploadingFile] = useState(false)
     const [userProfile, setUserProfile] = useState({
         fullName: '',
         email: '',
@@ -710,6 +712,62 @@ export default function AISalesAgent() {
             })
         }
     }, [session?.uid]);
+
+    const handlefileUpload = async() => {
+        const file = event.target.files[0]
+        if(!file) return ; 
+
+        if(file.size > 5 * 1024* 1024) {
+            alert('Maximum file size is 5MB')
+            return ; 
+        } 
+
+        setIsUploadingFile(true); 
+
+        try {
+             if(file.type == "image/") {
+                const base64 = await convertToBase64(file);
+                setUploadedFile({
+                    name: file.name,
+                    type: 'image',
+                    data: base64,
+                    mimetype: file.type
+                })
+
+                if(file.type == "application/pdf"){
+                    const content = await extractPdfText ; 
+                    setUploadedFile({
+                        name:file.name,
+                        type: 'text',
+                        name: file.name
+                    })
+                } else {
+                    alert('Please upload an image (JPG, PNG) or PDF file')
+                }
+             }
+        } catch (error) {
+            console.error("Could not upload selected file", error)
+            alert('Error processing file. Please try again.')
+        }finally {
+            setIsUploadingFile(false)
+        }
+
+         
+    };
+
+    const convertToBase64 = () =>{
+        
+
+        }
+    const extractPdfText = () =>{
+
+    }
+
+        const removeFileUpload = ()=> {
+            setUploadedFile(null);
+        }
+
+
    
     if (!session?.uid) {
         return (
