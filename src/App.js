@@ -964,34 +964,72 @@ export default function AISalesAgent() {
                     </div>
 
                     {/* Message Input */}
-                    <div className="bg-white border-t border-gray-200 p-6">
-                        <form onSubmit={sendMessage} className="flex gap-4">
-
-                        
-                        
-
-
-
-
-
-                            <input
-                                type="text"
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                                placeholder="Type your message..."
-                                className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-gray-400 focus:bg-white transition-all text-sm"
-                                disabled={isLoading}
-                            />
-                            <button
-                                type="submit"
-                                // disabled={!newMessage.trim() || isLoading}
-                                className="bg-black text-white px-6 py-4 rounded-2xl hover:bg-gray-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                            >
-                                <Send size={18} />
-                            </button>
-                        </form>
+<div className="bg-white border-t border-gray-200 p-6">
+    {/* File Upload Section */}
+    {uploadedFile && (
+        <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        {uploadedFile.type === 'image' ? '🖼️' : '📄'}
                     </div>
+                    <div>
+                        <p className="text-sm font-medium text-gray-900">{uploadedFile.name}</p>
+                        <p className="text-xs text-gray-500">
+                            {uploadedFile.type === 'image' ? 'Image uploaded' : 'PDF text extracted'}
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={removeFileUpload}
+                    className="text-gray-400 hover:text-red-500 text-sm"
+                >
+                    Remove
+                </button>
+            </div>
+        </div>
+    )}
+    
+    <form onSubmit={sendMessage} className="flex gap-4">
+        {/* File Upload Button */}
+        <div className="flex items-end">
+            <label className="cursor-pointer">
+                <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    disabled={isUploadingFile}
+                />
+                <div className="bg-gray-100 hover:bg-gray-200 p-3 rounded-xl transition-colors">
+                    {isUploadingFile ? (
+                        <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                        <span className="text-xl">📄</span>
+                    )}
+                </div>
+            </label>
+        </div>
+        
+        <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type your message..."
+            className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-gray-400 focus:bg-white transition-all text-sm"
+            disabled={isLoading}
+        />
+        
+        <button
+            type="submit"
+            // disabled={!newMessage.trim() || isLoading}
+            className="bg-black text-white px-6 py-4 rounded-2xl hover:bg-gray-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+            <Send size={18} />
+        </button>
+    </form>
+</div>
                 </div>
             </div>
         </div>
