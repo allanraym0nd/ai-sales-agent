@@ -594,7 +594,6 @@ export default function AISalesAgent() {
     }
 
     /**
-     * Creates a new user profile in Firestore
      * @param {Object} profileData - The profile data to save
      * @returns {Promise} - Resolves when profile is created
      */
